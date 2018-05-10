@@ -19,6 +19,10 @@ class(sc)
 flights <- copy_to(sc, flights, "flights")
 airlines <- copy_to(sc, airlines, "airlines")
 
+## reading a csv file into spark
+loandata <- spark_read_csv(sc, name = 'LoanData',
+                           path = "/Users/nvs/Downloads/Data sets/bank-full.csv")
+
 ## This will show the class and structrue of the spark data frame. its stored on local spark cluster
 class(flights)
 str(flights)
@@ -42,7 +46,14 @@ microbenchmark(flights2 %>% filter(dep_delay > 1000))
 arrange(flights, desc(dep_delay))
 summarise(flights, mean_dep_delay = mean(dep_delay))
 
-## All these are instances are not loaded into R. these are lazy instances and evaluated at runtime only.
+## All these are instances are not loaded into R. 
+##these are lazy instances and evaluated at runtime only.
+
+## When we look into Spark console, we can see th DAG for these processes.
+## These are Spark "transformations" stored as spark_tbl instances on R memory.
+## They run when they are called everytime. Unless we capture the output using collect function
+## In that case, it will be dumped as data frame in R memory.
+
 c1 <- filter(flights, day == 17, month == 5, carrier %in% c('UA', 'WN', 'AA', 'DL'))
 c2 <- select(c1, year, month, day, carrier, dep_delay, air_time, distance)
 c3 <- arrange(c2, year, month, day, carrier)
@@ -72,5 +83,20 @@ bestworst <- flights %>%
   select(dep_delay) %>% 
   filter(dep_delay == min(dep_delay, na.rm = T) || dep_delay == max(dep_delay, na.rm = T))
 
-
+## convert the dplyr operations to equivalent SQL code. 
 dbplyr::sql_render(bestworst)
+
+
+## Join operations
+flights %>% left_join(airlines, by = 'carrier')
+
+
+## taking sample from spark daata frames
+sample_n(tbl = flights,size = 10,replace = F)
+sample_frac(tbl = flights,size = 0.7,replace = F)
+
+
+## Up side is that all the dplyr funtions are compatible with spark data frames and there is no 
+## type casting or conversion needed.
+## Downside is the visualition aspect. ggplot is not compatbile with spark DF so we need to load 
+## the data in R and then perform visualization.

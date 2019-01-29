@@ -5,12 +5,19 @@ library(sparklyr)
 library(microbenchmark)
 library(dbplyr)
 
+
+sc <- spark_connect(master="local")
+
+## RDD 
+## DAG
+## transformations & actions 
+
 #  Reference Source (most of the code will be found here.)
 # http://spark.rstudio.com/dplyr/
 
 flights2 = nycflights13::flights
 
-sc <- spark_connect(master="local")
+
 ## sc is the spark context... a connection object to communicate between R & Spark cluster
 str(sc)
 class(sc)
@@ -35,7 +42,10 @@ src_tbls(sc)
 
 select(flights,  year, month,dep_delay)
 
-flights %>% group_by(month) %>% summarize(avgDelay = mean(dep_delay, na.rm =T)) %>% arrange(month)
+flights %>% 
+  group_by(month) %>%
+  summarize(avgDelay = mean(dep_delay, na.rm =T)) %>% 
+  arrange(month)
 
 ## checking performance of loadin data from spark vs R memory 
 ## even for a simple filter function, you can compare the performance again.(spark is 6 times faster on average.)
@@ -95,6 +105,8 @@ flights %>% left_join(airlines, by = 'carrier')
 sample_n(tbl = flights,size = 10,replace = F)
 sample_frac(tbl = flights,size = 0.7,replace = F)
 
+## use this to remove data frame from spark
+dplyr::db_drop_table(sc, 'iris')
 
 ## Up side is that all the dplyr funtions are compatible with spark data frames and there is no 
 ## type casting or conversion needed.
